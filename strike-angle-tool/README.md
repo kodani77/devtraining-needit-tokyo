@@ -50,6 +50,20 @@
 
 キーボード: `←` `→` で 0.5°、`Shift` 併用で 5°、`Delete` で選択中の物を削除。
 
+## スマホで自分だけ使う（公開しない）
+
+`dist/shot-angle-board.html` は CSS と JS をすべて埋め込んだ 1 ファイル版です。
+サーバーに置かずにスマホへ直接入れて、オフラインで使えます。
+
+作り直すとき: `node strike-angle-tool/build-standalone.js`
+
+- **Android**: ファイルをスマホへ送り（Google ドライブ、USB など）、ファイルアプリから「Chrome で開く」。
+  Chrome のメニュー →「ホーム画面に追加」でアイコンから起動できます。
+- **iPhone**: Safari は端末内の HTML ファイルを開けないため、JavaScript が動く HTML ビューアーアプリ
+  （HTML を「プレビュー」できるエディタ系アプリなど）で開きます。
+
+配置はそのブラウザ（アプリ）の中にだけ保存されます。
+
 ## ファイル構成
 
 ```
@@ -58,6 +72,8 @@ strike-angle-tool/
 ├── css/style.css       スタイル（ライト / ダーク対応）
 ├── js/physics.js       物理・当たり判定エンジン（UI 非依存、Node からも使える）
 ├── js/app.js           キャンバス描画と操作
+├── build-standalone.js 1 ファイル版を作るスクリプト
+├── dist/shot-angle-board.html  スマホ用 1 ファイル版（ビルド結果）
 └── test/physics.test.js
 ```
 
