@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ショット角度ボード</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16 L26 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="currentColor"/></svg>
+    <div>
+      <h1>ショット角度ボード</h1>
+      <p class="tagline">ひっぱりアクションの反射ルートと当たり判定をシミュレーション</p>
+    </div>
+  </div>
+  <div class="seg" role="radiogroup" aria-label="ショットタイプ">
+    <button type="button" id="shot-reflect" class="seg-btn" data-shot="reflect" role="radio">反射</button>
+    <button type="button" id="shot-pierce" class="seg-btn" data-shot="pierce" role="radio">貫通</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="board-col" aria-label="フィールド">
+    <div class="board-toolbar">
+      <button type="button" id="add-boss" class="chip chip-boss">＋ ボス</button>
+      <button type="button" id="add-minion" class="chip chip-minion">＋ 雑魚</button>
+      <button type="button" id="add-block" class="chip chip-block">＋ ブロック</button>
+      <button type="button" id="add-weak" class="chip chip-weak" disabled>＋ 弱点</button>
+      <span class="toolbar-spacer"></span>
+      <label class="toggle"><input type="checkbox" id="pull-mode"> ひっぱり操作</label>
+    </div>
+    <div class="board-frame" id="board-frame">
+      <canvas id="board" aria-label="フィールド。空いている所をドラッグすると角度を変えられます"></canvas>
+      <div class="drop-hint" id="drop-hint" hidden>画像をドロップして背景にする</div>
+    </div>
+    <p class="hint" id="mode-hint">空いている所をドラッグ → その方向へ発射。敵・ブロック・ボールはドラッグで移動。← → キーで 0.5° ずつ調整。</p>
+  </section>
+
+  <aside class="panel">
+    <section class="card angle-card" aria-labelledby="h-angle">
+      <h2 id="h-angle" class="eyebrow">発射角</h2>
+      <div class="angle-readout">
+        <div class="dial" aria-hidden="true"><span id="dial-needle" class="dial-needle"></span></div>
+        <div>
+          <output id="angle-value" class="angle-value">0.0°</output>
+          <div class="angle-sub"><span id="angle-clock">12時</span> 方向 ・ 0° = 真上 / 時計回り</div>
+        </div>
+      </div>
+      <div class="angle-controls">
+        <button type="button" class="step" data-step="-5">−5</button>
+        <button type="button" class="step" data-step="-0.5">−0.5</button>
+        <input type="range" id="angle-range" min="0" max="359.5" step="0.5" value="0" aria-label="発射角">
+        <button type="button" class="step" data-step="0.5">+0.5</button>
+        <button type="button" class="step" data-step="5">+5</button>
+      </div>
+      <div class="angle-input-row">
+        <label for="angle-input">数値で指定</label>
+        <input type="number" id="angle-input" min="0" max="360" step="0.5" value="0" inputmode="decimal">
+        <span>°</span>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-result">
+      <h2 id="h-result" class="eyebrow">当たり判定（この角度）</h2>
+      <dl class="stats" id="stats"></dl>
+      <p class="first-hit" id="first-hit"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-best">
+      <div class="card-head">
+        <h2 id="h-best" class="eyebrow">おすすめ角度</h2>
+        <label class="toggle small"><input type="checkbox" id="show-heat" checked> 角度マップ</label>
+      </div>
+      <div class="field-row">
+        <label for="priority">狙い</label>
+        <select id="priority">
+          <option value="balance">バランス</option>
+          <option value="boss">ボス集中</option>
+          <option value="weak">弱点狙い</option>
+          <option value="minion">雑魚処理</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label for="tolerance">指のブレ</label>
+        <input type="range" id="tolerance" min="0" max="5" step="0.5" value="1">
+        <output id="tolerance-out" class="mono">±1.0°</output>
+      </div>
+      <ol class="best-list" id="best-list"></ol>
+      <p class="note">全方向を 0.5° 刻みで試し、ブレても点が落ちにくい角度を上に出します。</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-selected">
+      <h2 id="h-selected" class="eyebrow">選択中</h2>
+      <div id="props"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-shot">
+      <h2 id="h-shot" class="eyebrow">ショット設定</h2>
+      <div class="field-row">
+        <label for="distance">移動距離</label>
+        <input type="range" id="distance" min="1" max="20" step="0.5" value="4">
+        <output id="distance-out" class="mono">×4</output>
+      </div>
+      <p class="note">フィールドの縦の何本分を進むか。スピードが速いキャラほど長くします。</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-image">
+      <h2 id="h-image" class="eyebrow">背景スクリーンショット</h2>
+      <div class="file-row">
+        <input type="file" id="image-input" accept="image/*">
+        <label class="file-btn" for="image-input">画像を選ぶ</label>
+        <button type="button" id="image-clear" class="ghost" disabled>外す</button>
+      </div>
+      <p class="note">プレイ画面のスクショを読み込んで、敵やブロックの上に判定を置いていきます。貼り付け（Ctrl+V）やドロップもできます。</p>
+      <div id="crop-controls" class="crop-grid" hidden>
+        <label for="crop-top">上を切る</label><input type="range" id="crop-top" min="0" max="45" step="0.5" value="0"><output class="mono" id="crop-top-out">0%</output>
+        <label for="crop-bottom">下を切る</label><input type="range" id="crop-bottom" min="0" max="45" step="0.5" value="0"><output class="mono" id="crop-bottom-out">0%</output>
+        <label for="crop-left">左を切る</label><input type="range" id="crop-left" min="0" max="25" step="0.5" value="0"><output class="mono" id="crop-left-out">0%</output>
+        <label for="crop-right">右を切る</label><input type="range" id="crop-right" min="0" max="25" step="0.5" value="0"><output class="mono" id="crop-right-out">0%</output>
+        <label for="image-opacity">濃さ</label><input type="range" id="image-opacity" min="0.2" max="1" step="0.05" value="0.85"><output class="mono" id="image-opacity-out">85%</output>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-layout">
+      <h2 id="h-layout" class="eyebrow">配置</h2>
+      <div class="button-row">
+        <button type="button" id="reset-sample" class="ghost">サンプル配置に戻す</button>
+        <button type="button" id="clear-all" class="ghost danger">敵とブロックを全部消す</button>
+      </div>
+      <p class="note">配置はこのブラウザに自動で保存されます。</p>
+    </section>
+  </aside>
+</main>
+
+<script src="js/physics.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
